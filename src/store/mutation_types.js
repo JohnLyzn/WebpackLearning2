@@ -1,0 +1,1 @@
+export const BIND_CURRENT = 'BIND_CURRENT';
