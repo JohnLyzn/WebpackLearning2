@@ -30,7 +30,6 @@ export default class DbCache {
             readyFn && readyFn(this);
             return;
         }
-        
         const start = _.now();
         await this._persist();
         console.log('sync end', this._name, _.now() - start);

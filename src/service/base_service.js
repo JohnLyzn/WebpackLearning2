@@ -420,24 +420,25 @@ export default class BaseService {
 		// 读缓存的内部函数
 		const _loadCache4Inner = (needReadyRetry) => {
 			const promise = new Promise((resolve) => {
-				// 根据传参判断是否需要缓存初始化完成回调处理
-				if(needReadyRetry) {
-					// 设置缓存读取成功的回调
-					placeholders._cacheReadyFn = () => {
-						// 递归调用一下
-						resolve(_loadCache4Inner(false));
-					};
-				} else {
-					// 否则将缓存读取成功的回调函数删除
-					delete placeholders._cacheReadyFn;
-				}
-				// 查询缓存
-				let cacheable = this.queryFromCache(params, placeholders, callbacks);
-				// 查不到结果, 可能是缓存未初始化完成, 也可能是没有缓存
-				if(! cacheable.objs.length) {
-					return resolve(promise);
-				}
-				return resolve(success4Inner(cacheable, { $fromCache: true }));
+				// 不setTimeou会抢占, 就无法进行正确的resolve处理了
+				setTimeout(() => {
+					// 根据传参判断是否需要缓存初始化完成回调处理
+					if(needReadyRetry) {
+						// 设置缓存读取成功的回调
+						placeholders._cacheReadyFn = () => {
+							// 递归调用一下
+							delete placeholders._cacheReadyFn;
+							resolve(_loadCache4Inner(false));
+						};
+					}
+					// 查询缓存
+					let cacheable = this.queryFromCache(params, placeholders, callbacks);
+					// 查不到结果, 可能是缓存未初始化完成, 也可能是没有缓存
+					if(! cacheable.objs.length) {
+						return;
+					}
+					resolve(success4Inner(cacheable, { $fromCache: true }));
+				}, 0);
 			});
 			return promise;
 		};
@@ -455,13 +456,7 @@ export default class BaseService {
 				return result;
 			}
 		} else {
-			// 其它情况下优先触发缓存返回
-			// !!! setTimeout必须否则在这里Promise就被Resolve了后面ajax不会请求
-			const start = Date.now();
-			setTimeout(() => {
-				_loadCache4Inner(true);
-				console.log('_loadCache4Inner end', placeholders['errorTag'], Date.now() - start);
-			}, 0);
+			_loadCache4Inner(true);
 		}
 		// 否则准备ajax请求
 		placeholders._handling = HANDLING__QUERY;
@@ -729,7 +724,7 @@ export default class BaseService {
 	 */
 	_generateUnfetchObjAndCache(objId, objType, params, placeholders) {
 		if(! objId) {
-			console.log(objId);
+			console.error('无法为无效ID创建默认模型实例', objId, placeholders);
 		}
 		const obj = new objType({
 			id: objId.toString(),
@@ -1118,6 +1113,9 @@ const _getCacheSubObjIdProp = (placeholders, parentObj) => {
  * @param {Object} obj 当前缓存对象
  */
 const _setCacheProp = (cacheKey, parentObj, newVal, obj) => {
+	if(! parentObj) {
+		return;
+	}
 	if(cacheKey.indexOf('[') == -1) {
 		parentObj[cacheKey] = newVal;
 		return;

@@ -63,12 +63,13 @@ export default class Task {
     persist() {
         const cache = this._cacheManager.cacheOf(Task);
         if(! cache) {
-            return;
+            return false;
         }
         if(this._status == TASK_STATUS.CANCEL
             || this._status == TASK_STATUS.SUCCESS) {
+            this._taskQueue.cancel(this);
             cache.remove(this.id());
-            return;
+            return false;
         }
         cache.cache(this.id(), {
             id: this.id(),
@@ -78,6 +79,7 @@ export default class Task {
             status: this.status(),
             result: this.result(),
         });
+        return true;
     };
     
     start() {

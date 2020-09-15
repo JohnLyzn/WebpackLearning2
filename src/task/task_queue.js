@@ -31,6 +31,7 @@ export default class TaskQueue {
         }
         const task = this._buildTask(taskObj, callbacks);
         if(! this._putIdMapping(task)) {
+            this._retryExistedTask(task);
             return false;
         }
         this._putNameMapping(task);
@@ -142,6 +143,20 @@ export default class TaskQueue {
             this._nameMapping[taskName] = [];
         }
         this._nameMapping[taskName].push(task);
+    };
+
+    _retryExistedTask(task) {
+        const taskId = this._getTaskId(task);
+        const exisedTask = this._idMapping[taskId];
+        if(! exisedTask) {
+            return false;
+        }
+        if(! exisedTask.retry()) {
+            exisedTask.persist();
+            this._untrace(exisedTask);
+            return false;
+        }
+        return true;
     };
 
     _untrace(task) {

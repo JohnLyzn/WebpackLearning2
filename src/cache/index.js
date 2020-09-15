@@ -11,11 +11,9 @@ export default class DbCacheManager {
     };
 
     cacheOf(objType, options) {
-        const start = _.now();
         const cacheKey = this._getCacheKey(objType);
         if(this._caches[cacheKey]) {
             this._caches[cacheKey].sync(options && options.onReady);
-            console.log('cacheOf end', _.now() - start);
             return this._caches[cacheKey];
         }
         this._caches[cacheKey] = new DbCache(cacheKey, _.merge({
