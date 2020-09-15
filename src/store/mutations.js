@@ -14,6 +14,26 @@ export default {
         if(current.userName) {
             Vue.set(state.CURRENT, 'userName', current.userName);
         }
+        if(current.organizationId) {
+            Vue.set(state.CURRENT, 'organizationId', current.organizationId);
+        }
+        if(current.departmentId) {
+            Vue.set(state.CURRENT, 'departmentId', current.departmentId);
+        }
+        if(current.bandId) {
+            Vue.set(state.CURRENT, 'bandId', current.bandId);
+        }
+        if(current.loading) {
+            Vue.set(state.CURRENT, 'loading', current.loading);
+        }
+    },
+    [BIND_DEVICE](state, current) {
+        if(! current) {
+            return;
+        }
+        if(current.isMobile) {
+            Vue.set(state.CURRENT, 'isMobile', current.isMobile);
+        }
     },
 };
 

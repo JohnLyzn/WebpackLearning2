@@ -7,10 +7,15 @@ Vue.use(Vuex)
 const state = {
     CURRENT: {
         organizationId: '',
+        departmentId: '',
+        bandId: '',
         userId: '',
         userName: '',
 
         loading: false,
+    },
+    DEVICE: {
+        isMobile: false,
     },
 };
 

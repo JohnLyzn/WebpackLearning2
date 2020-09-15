@@ -1,7 +1,7 @@
 <template>
 	<div class="main-container"
 		data-content-max
-		v-resize="adjustBasicSize">
+		v-resize="onResize">
 		<div class="main-body-wrapper">
 			<transition name="router-fade" mode="out-in">
 				<keep-alive>
@@ -128,6 +128,22 @@
 			]),
 			back() {
 				pageBack();
+			},
+			onResize() {
+				// 调整基准比例
+				this.adjustBasicSize();
+				// 检查当前屏幕宽度, 做适配
+				this.changeDeviceType();
+			},
+			changeDeviceType() {
+				if(! window.innerWidth) {
+					return;
+				}
+				if(window.innerWidth < 648) {
+					this.BIND_DEVICE({ isMobile: true });
+					return;
+				}
+				this.BIND_DEVICE({ isMobile: false });
 			},
 			/* 配合mixin中的rem+vw布局处理使用 */
 			adjustBasicSize() {
