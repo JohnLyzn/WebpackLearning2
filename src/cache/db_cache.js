@@ -1,16 +1,21 @@
 import _ from 'lodash';
 import localforage from 'localforage';
 
+import { Config } from 'common/constants';
 import Utils from 'common/utils';
 
-const CACHE_NAME = 'ICT_CACHES';
-localforage.config({ name: CACHE_NAME });
+if(Config.CACHE_NAME) {
+    localforage.config({ name: Config.CACHE_NAME });
+}
 
 export default class DbCache {
 
     constructor(name, options) {
+        if(! Config.CACHE_NAME) {
+            return;
+        }
         this._store = localforage.createInstance({
-            name: CACHE_NAME + '_' + g_userId
+            name: Config.CACHE_NAME + '_' + g_userId
         });
         this._name = name;
         this._cache = {};

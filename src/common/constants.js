@@ -5,6 +5,7 @@ import {toast,notify,alert} from 'common/env';
  */
 export const Config = {
 	ROUTER_MODE: 'hash',
+	CACHE_NAME: '',
 	MIN_SAME_TASK_POST_INTERVEL: 0, /* 单位为毫秒, <=0不启用*/
 	MIN_PAGING_INTERVEL: 500,/* 单位为毫秒*/
 	TIMEOUT_INTERVEL: 60000, /* 单位为毫秒*/
