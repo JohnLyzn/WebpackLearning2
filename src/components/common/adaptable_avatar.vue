@@ -1,5 +1,9 @@
 <template>
-    <div class="adaptable-avatar">
+    <div class="adaptable-avatar"
+        :class="{
+            'adaptable-avatar--square':square,
+            'adaptable-avatar--full':full,
+        }">
         <mu-avatar ref="avatar"
             :color="bgColorComputed"
             :text-color="textColorComputed"
@@ -11,6 +15,7 @@
                 </span>
                 <van-image v-else-if="url"
                     lazy-load
+                    fit="contain"
                     :src="url"
                 />
                 <mu-icon v-else-if="icon"
@@ -32,6 +37,14 @@
     export default {
         name: 'adaptable-avatar',
         props: {
+            square: {
+                type: Boolean,
+                default: false,
+            },
+            full: {
+                type: Boolean,
+                default: false,
+            },
             size: {
                 type: Number,
                 default: 36,
@@ -180,9 +193,37 @@
         width: auto;
         height: auto;
         overflow: hidden;
+        display: inherit;
         content: '#{px2rem(10px)}';
         .mu-avatar {
             overflow: hidden;
+        }
+        .van-image {
+            width: 100%;
+            height: 100%;
+            img {
+                border-radius: initial;
+            }
+        }
+        &.adaptable-avatar--square {
+            overflow: hidden;
+            .mu-avatar {
+                border-radius: initial;
+            }
+        }
+        &.adaptable-avatar--full {
+            width: 100%;
+            height: 100%;
+            padding: px2rem(8px);
+            .mu-avatar {
+                width: 100% !important;
+                height: 100% !important;
+                background: none !important;
+                border-radius: initial;
+                img {
+                    border-radius: initial;
+                }
+            }
         }
     }
 </style>

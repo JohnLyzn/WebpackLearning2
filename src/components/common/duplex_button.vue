@@ -176,7 +176,7 @@
                 };
             },
             clickMenuItem(menuItem) {
-                this.$emit('menu-click', menuItem.name);
+                this.$emit('menu-click', menuItem);
             },
             closeMenu() {
                 this.MENU.opening = false;
