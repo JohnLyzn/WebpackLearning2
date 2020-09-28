@@ -214,6 +214,10 @@
             value: {
                 type: String,
             },
+            focused: {
+                type: Boolean,
+                default: false,
+            },
             modelExtractKey: {
                 type: String,
                 default: '',
@@ -493,6 +497,17 @@
                     return;
                 }
                 this.inputValue = this._toInputValue(newValue);
+            },
+            'focused'(newValue) {
+                this.$nextTick(() => {
+                    if(this.inputFocused === newValue) {
+                        return;
+                    }
+                    this.inputFocused = newValue;
+                });
+            },
+            'inputFocused'(newValue) {
+                this.$emit('update:focused', newValue);
             },
             'inputValue'(newValue) {
                 if(this.isMultiple) {
@@ -998,7 +1013,7 @@
         .input-field__input {
             flex: 1 1 auto;
             .mint-field-core {
-                border-bottom: 1px solid $border;
+                border-bottom: 1px solid $bdc_main;
             }
             &.input-field__input--inline {
                 width: 180px;
@@ -1090,7 +1105,7 @@
         }
         .input-field__options-toolbar {
             height: 36px;
-            border-bottom: 1px solid $border;
+            border-bottom: 1px solid $bdc_main;
             span {
                 height: 2rem;
                 line-height: 2rem;
@@ -1104,7 +1119,7 @@
         .input-field__options-expandpath {
             max-height: 48px;
             display: flex;
-            border-top: 1px solid $border;
+            border-top: 1px solid $bdc_main;
             &>* {
                 max-height: 48px;
             }
@@ -1112,7 +1127,7 @@
         .input-field__options-list {
             height: 40vh;
             overflow: auto;
-            border-top: 1px solid $border;
+            border-top: 1px solid $bdc_main;
             -webkit-overflow-scrolling: touch;
             .mu-list {
                 min-height: 120px;

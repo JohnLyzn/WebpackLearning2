@@ -66,6 +66,7 @@
 		window.g_forwardUrl = '${forwardUrl}'; // 跳转接口
 		window.g_resourceUrl = '${resourceUrl}'; // 静态资源
 		window.g_userId = '${userID}'; // 当前用户账号
+		window.g_userName = '${userName}'; // 当前用户账号
 		window.g_accessToken = '${accessToken}'; // 当前用户的accessToken
 		window.g_bandId = '${bandID}'; // 当前运行的帮区ID
 		window.g_rtParam = '${toolParam}'; // 工具运行参数
@@ -79,6 +80,7 @@
 			'g_forwardUrl',
 			'g_resourceUrl',
 			'g_userId',
+			'g_userName',
 			'g_accessToken',
 			'g_bandId',
 			'g_rtParam',

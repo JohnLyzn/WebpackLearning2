@@ -8,7 +8,7 @@
                 <slot name="append"></slot>
             </slot>
             <span class="editable-label__edit-btn">
-                <mu-icon value=":iconfont iconinfo"></mu-icon>
+                <mu-icon value=":iconfont iconedit"></mu-icon>
             </span>
         </div>
         <div v-if="INPUT.enable"
