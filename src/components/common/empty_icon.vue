@@ -1,5 +1,6 @@
 <template>
-    <div class="empty-icon">
+    <div class="empty-icon"
+        :style="{'zoom':zoom}">
         <svg t="1578367843748" class="icon" viewBox="0 0 1024 1024" version="1.1"
              xmlns="http://www.w3.org/2000/svg" p-id="19850" width="90" height="90">
             <path d="M692.906667 385.024c-11.605333-2.730667-23.210667-6.144-34.816-11.605333l-63.488 25.258666-5.461334 2.048h-5.461333c-8.874667 0-17.749333-4.096-23.210667-11.605333-5.461333-7.509333-6.826667-17.066667-4.778666-25.258667l8.874666-30.72-97.621333-19.797333v400.725333L901.12 402.090667l-105.130667-21.162667c-18.432 5.461333-38.229333 8.874667-59.392 8.874667-13.653333 0-28.672-1.365333-43.690666-4.778667z"
@@ -24,7 +25,14 @@
     export default {
         name: 'empty',
         props: {
-            msg: String
+            msg: {
+                type: String,
+                default: '',
+            },
+            zoom: {
+                type: String,
+                default: '1',
+            },
         },
         data() {
             return {
@@ -65,6 +73,7 @@
         span {
             font-size: px2rem(14px);
             color: $fc_tip;
+            text-align: center;
         }
     }
 </style>

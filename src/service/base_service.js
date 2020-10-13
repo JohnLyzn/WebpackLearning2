@@ -447,16 +447,19 @@ export default class BaseService {
 		if(preventAjax) {
 			return _loadCache4Inner(true);
 		}
-		// 若指定只从缓存读取则读取缓存有效直接返回, 否则再进行请求
-		if(fromCache) {
-			const start = Date.now();
-			const result = await _loadCache4Inner(true);
-			console.log('_loadCache4Inner fromCache end', placeholders['errorTag'], Date.now() - start, result);
-			if(result) {
-				return result;
+		// 若不阻止从缓存查找
+		if(! preventCache) {
+			// 若指定只从缓存读取则读取缓存有效直接返回, 否则再进行请求
+			if(fromCache) {
+				const start = Date.now();
+				const result = await _loadCache4Inner(true);
+				console.log('_loadCache4Inner fromCache end', placeholders['errorTag'], Date.now() - start, result);
+				if(result) {
+					return result;
+				}
+			} else {
+				_loadCache4Inner(true);
 			}
-		} else {
-			_loadCache4Inner(true);
 		}
 		// 否则准备ajax请求
 		placeholders._handling = HANDLING__QUERY;
