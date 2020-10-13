@@ -449,9 +449,8 @@ export default class BaseService {
 		if(preventAjax) {
 			return _loadCache4Inner(true);
 		}
-		// 若不阻止从缓存查找
+		// 若指定只从缓存读取则读取缓存有效直接返回, 否则再进行请求
 		if(! preventCache) {
-			// 若指定只从缓存读取则读取缓存有效直接返回, 否则再进行请求
 			if(fromCache) {
 				const start = Date.now();
 				const result = await _loadCache4Inner(true);
@@ -761,10 +760,16 @@ const _ajaxTemplate = async (params, callbacks, placeholders, task) => {
 	const copyParamNames = Config.COPY_PARAM_NAMES;
 	for(let i = 0; i < copyParamNames.length; i ++ ) {
 		const copyParamName = copyParamNames[i];
-		if(! params.hasOwnProperty(copyParamName) || ! params[copyParamName]) {
+		if(Utils.isString(copyParamName)) {
+			if(! params.hasOwnProperty(copyParamName) || ! params[copyParamName]) {
+				continue;
+			}
+			ajaxParams[copyParamName] = params[copyParamName];
 			continue;
 		}
-		ajaxParams[copyParamName] = params[copyParamName];
+		if(Utils.isObject(copyParamName)) {
+			ajaxParams[copyParamName.key] = params[copyParamName.value];
+		}
 	}
 	// 处理分页
 	if(params.pagination) {
@@ -812,16 +817,10 @@ const _ajaxTemplate = async (params, callbacks, placeholders, task) => {
 	let method = placeholders['_ajaxMethod'] || placeholders['method'];
 	if(! url) {
 		url = getBaseUrl(params);
-	} else {
-		if(Utils.isArray(url)) {
-			const urlArray = url;
-			method = urlArray[0];
-			url = urlArray[1];
-		}
-		if(getBaseUrl().startsWith('http') 
-			&& ! url.startsWith('http')) {
-			url = getBaseUrl(params) + url;
-		}
+	} else if(Utils.isArray(url)) {
+		const urlArray = url;
+		method = urlArray[0];
+		url = urlArray[1];
 	}
 	// 发起请求得到结果
 	const json = await ajax({
