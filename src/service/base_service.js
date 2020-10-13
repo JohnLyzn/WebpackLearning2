@@ -377,6 +377,8 @@ export default class BaseService {
 		task = params.task || task;
 		// 是否仅从缓存中查找
 		let fromCache = params['fromCache'] || placeholders['fromCache'];
+		// 是否阻止从缓存中查找
+		let preventCache = params['preventCache'] || placeholders['preventCache'];
 		// 是否阻止远程请求
 		let preventAjax = params['preventAjax'] || placeholders['preventAjax'];
 		// 如果外层定义没有确定返回结果数目, 则由参数决定
