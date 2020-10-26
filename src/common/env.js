@@ -241,7 +241,17 @@ Vue.use(Toast);
 Vue.use(Notify);
 import 'muse-ui-message/dist/muse-ui-message.css';
 import Message from 'muse-ui-message';
-Vue.use(Message);
+Vue.use(Message, {
+	successIcon: ':iconfont icondui',                    // 成功图标
+	infoIcon: ':iconfont iconinfo1',                               // 信息图标
+	warningIcon: ':iconfont iconwarn',                   // 提醒图标
+	errorIcon: ':iconfont iconerror',                           // 错误图标
+	iconSize: 64,                                   // 图标大小
+	maxWidth: '80%',                                // 对话框最大宽度
+	okLabel: '确定',                                 // 对话框确定按钮文字
+	cancelLabel: '取消',                             // 对话框取消按钮文字
+	transition: 'scale'
+});
 
 /**
  * 提示信息(主要)
@@ -773,3 +783,52 @@ export const isSameDeploy = (gid1, gid2) => {
 	return parseInt(gid1) % Math.pow(10, 8) - gid1
 		== parseInt(gid2) % Math.pow(10, 8) - gid2;
 };
+
+/**
+ * 全屏
+ */
+export const requestFullScreen = () => {
+	//W3C
+	const el = document.documentElement;
+	if (el.requestFullscreen) {
+		el.requestFullscreen();
+		return;
+	}
+	//FireFox
+	if (el.mozRequestFullScreen) {
+		el.mozRequestFullScreen();
+		return;
+	}
+	//Chrome等
+	if (el.webkitRequestFullScreen) {
+		el.webkitRequestFullScreen();
+		return;
+	}
+	//IE11
+	if (el.msRequestFullscreen) {
+		el.body.msRequestFullscreen();
+		return;
+	}
+};
+
+/**
+ * 退出全屏
+ */
+export const exitFullscreen = () => {
+	if (document.exitFullscreen) {
+		document.exitFullscreen();
+		return;
+	}
+	if (document.msExitFullscreen) {
+		document.msExitFullscreen();
+		return;
+	}
+	if (document.mozCancelFullScreen) {
+		document.mozCancelFullScreen();
+		return;
+	}
+	if (document.webkitCancelFullScreen) {
+		document.webkitCancelFullScreen();
+		return;
+	}
+}

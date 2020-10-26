@@ -25,9 +25,9 @@
     export default {
         name: 'empty',
         props: {
-            msg: {
+            message: {
                 type: String,
-                default: '',
+                default: '无数据',
             },
             zoom: {
                 type: String,
@@ -36,7 +36,6 @@
         },
         data() {
             return {
-                message: this.msg || '无数据'
             };
         },
     }

@@ -135,6 +135,9 @@ export default class BaseService {
 						innerCall: true
 					}, args);
 					const obj = cacheable.objs[0];
+					if(! obj) {
+						return cacheable;
+					}
 					const parentObjId = _getCacheParentObjId(placeholders, obj);
 					if(! parentObjId) {
 						return cacheable;
@@ -158,6 +161,9 @@ export default class BaseService {
 						objType: placeholders['subObjType'],
 					}, args);
 					const obj = cacheable.objs[0];
+					if(! obj) {
+						return cacheable;
+					}
 					const parentObjId = _getCacheParentObjId(placeholders, obj);
 					if(! parentObjId) {
 						return cacheable;
@@ -177,7 +183,7 @@ export default class BaseService {
 				},
 			},
 			PARENT_CHILDREN: {
-				identifyKeys: ['parentObjType', 'subObjType', 'parentObjId','subObjIdsCacheKey', '|removeSubObjIds'],
+				identifyKeys: ['parentObjType', 'subObjType', 'parentObjId','subObjIdsCacheKey', '|removeObjIds'],
 				get: (params, placeholders, args) => {
 					let parentObj = this._getObjInCache(placeholders['parentObjId'], placeholders['parentObjType'], params, placeholders);
 					if(! parentObj) {
@@ -231,7 +237,7 @@ export default class BaseService {
 				},
 				remove: (params, placeholders, args) => {
 					const cacheable = this.CACHE_RULES.MULTI.remove(params, {
-						removeObjIds: placeholders['removeSubObjIds'],
+						removeObjIds: placeholders['removeObjIds'],
 						objType: placeholders['subObjType'],
 					}, args);
 					for(let obj of cacheable.objs) {
@@ -1230,6 +1236,7 @@ const _pagingCache = (objs, pagination, callbacks) => {
 	
 	pagination.fetchedTotal = objs.length;
 	_setPagination(pagination, null, callbacks);
+	pagination.cachePaged = true;
 	
 	let start = (pagination.page - 1) * pagination.count; /* 缓存分页忽略offset */
 	let end = start + pagination.count;
@@ -1261,7 +1268,8 @@ const _setPagination = (pagination, ajaxParams, callbacks) => {
 		};
 		command = 'reset';
 	}
-	if(! pagination.cacheMissed) {
+	if(! pagination.cacheMissed
+		&& ! pagination.cachePaged) {
 		let currentTime = Date.now();
 		if(oldPagination.$lastPagingTime 
 			&& currentTime - oldPagination.$lastPagingTime <= Config.MIN_PAGING_INTERVEL) {
@@ -1282,8 +1290,6 @@ const _setPagination = (pagination, ajaxParams, callbacks) => {
 			*  这时page已经是缓存最大页的下一页了(所以才会没有), 因此跳过页码增加的步骤 */
 		if(! pagination.cacheMissed) {
 			oldPagination.page ++;
-		} else {
-			delete pagination.cacheMissed;
 		}
 		break;
 	case 'previous':
@@ -1328,6 +1334,8 @@ const _setPagination = (pagination, ajaxParams, callbacks) => {
 			ajaxParams.offset = oldPagination.offset;
 		}
 	}
+	delete pagination.cacheMissed; /* 不缓存这些 */
+	delete pagination.cachePaged;
 	Utils.copyProperties(oldPagination, pagination);
 	_putCache(cache, oldPagination);
 	return true;
@@ -1751,7 +1759,7 @@ class TaskManager {
 			oldTask.result = result.data || result;
 			oldTask.status = status;
 			oldTask.updateTime = currentTime;
-			_putCache(cacheManager, oldTask);
+			_putCache(cache, oldTask);
 			return true;
 		}
 		return false;
