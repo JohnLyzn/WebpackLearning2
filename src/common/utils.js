@@ -198,11 +198,7 @@ const Utils = {
 			// 如果是数组, 合并后赋值
 			if(Utils.isArray(fromVal)) {
 				let copyArr = [];
-				// 加入已有的值
-				if(Utils.isArray(to[property])) {
-					copyArr.push(...to[property]);
-				}
-				// 被写入(from)的值再遍历复制以及加入数组
+				// 被写入(from)的值遍历复制并加入数组,准备覆盖写入值(to)
 				for(let item of fromVal) {
 					// 这里要确定是否是重复需要跳过, 否则多次复制同值会不断重复
 					if(options.arrayContains(copyArr, item)) {
@@ -217,6 +213,16 @@ const Utils = {
 					}
 					// 加入数组
 					copyArr.push(item);
+				}
+				// 加入已有的值
+				if(Utils.isArray(to[property])) {
+					for(let item of to[property]) {
+						// 这里要确定是否是重复需要跳过, 否则多次复制同值会不断重复
+						if(options.arrayContains(copyArr, item)) {
+							continue;
+						}
+						copyArr.push(item);
+					}
 				}
 				to[property] = copyArr;
 				continue;
@@ -509,7 +515,7 @@ const Utils = {
 	 * @return {String} 查询参数字符串, 如: 传入{a:1,b:2}返回&a=1&b=2
 	 */
 	toQueryStr(obj) {
-		if(! Utils.isValidvariable(obj)) {
+		if(! Utils.isValidVariable(obj)) {
 			return '';
 		}
 		if(Utils.isString(obj)) {

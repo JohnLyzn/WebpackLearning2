@@ -1,0 +1,15 @@
+ <script type="text/javascript">
+   window.g_runToolUrl = '${actionUrl}'; // 数据接口
+   window.g_callToolUrl = '${runToolUrl}'; // 工具调用
+   window.g_forwardUrl = '${forwardUrl}'; // 跳转接口
+   window.g_resourceUrl = '${resourceUrl}'; // 静态资源
+   window.g_userId = '${userID}'; // 当前用户账号
+   window.g_accessToken = '${accessToken}'; // 当前用户的accessToken
+   window.g_bandId = '${bandID}'; // 当前运行的帮区ID
+   window.g_rtParam = '${toolParam}'; // 工具运行参数
+   window.g_clientType = '${clientType}'; // 工具当前的运行平台
+   window.g_thisToolId = '${toolID}'; // 工具的ID
+   window.g_coreUrl = '${openInterfaceUrl}';
+   window.g_userAccount = '${userAccount}';
+   window.g_userName = '${userName}';
+ </script>

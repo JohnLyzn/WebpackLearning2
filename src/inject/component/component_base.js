@@ -4,6 +4,8 @@ import _ from 'lodash';
 import Moment from 'moment';
 
 import { 
+    openUrl,
+    isCurrentClient,
     toast,
 } from 'common/env';
 
@@ -29,12 +31,9 @@ export default {
         ...mapMutations([
             'BIND_CURRENT'
         ]),
-        $$formatSendTime(sendTimeOrStr) {
-            const sendTime = parseInt(sendTimeOrStr);
-            if(! _.isNumber(sendTime)) {
-                return;
-            }
-            const moment = Moment(sendTime);
+        $$formatTime(sendTimeOrStr) {
+            const moment = Moment(sendTimeOrStr);
+            let date = moment.toDate();
             let locale = moment.format('YYYY-MM-DD HH:mm');
             let localeDate = moment.format('YYYY-MM-DD');
             let since = moment.fromNow();
@@ -49,10 +48,22 @@ export default {
                 }
             }
             return {
-                time: sendTime,
+                date: date,
+                time: date.getTime(),
                 locale: locale,
                 localeDate: localeDate,
                 since: since,
+            };
+        },
+        $$getTimeRange(sendTimeOrStr, type, format = 'YYYY-MM-DD HH:mm:ss') {
+            const moment = sendTimeOrStr ? Moment(sendTimeOrStr) : Moment();
+            const start = moment.startOf(type);
+            const end = moment.endOf(type);
+            return {
+                start: format ? start.format(format) : start,
+                end: format ? end.format(format) : end,
+                startTime: start.toDate().getTime(),
+                startTime: end.toDate().getTime(),
             };
         },
         $$commonHandleResult(obj, command, results) {
@@ -77,6 +88,9 @@ export default {
                 const oldOne = obj.rowMap[result.id];
                 const index = obj.rows.indexOf(oldOne);
                 obj.rowMap[result.id] = result;
+                if(! obj.rows) {
+                    obj.rows = [];
+                }
                 if(index != -1) {
                     obj.rows[index] = result;
                     continue;
@@ -84,12 +98,70 @@ export default {
                 obj.rows.push(result);
             }
         },
+        $$getCache(key, cacheType) {
+            if(_.isPlainObject(obj) && ! cacheName) {
+                return;
+            }
+            const cacheManager = this.$$context.get(':cache');
+            if(! cacheManager) {
+                return;
+            }
+            const cahce = cacheManager.cacheOf(cacheType);
+            if(! cahce) {
+                return;
+            }
+            return cahce.get(key);
+        },
+        $$setCache(obj, cacheType) {
+            const cacheManager = this.$$context.get(':cache');
+            if(! cacheManager) {
+                return;
+            }
+            const cahce = cacheManager.cacheOf(cacheType || obj.prototype);
+            if(! cahce) {
+                return;
+            }
+            cahce.cache(obj.id, obj);
+        },
         $$retryTask(taskId) {
             const task = this.$$context.task(taskId);
             if(! task) {
                 return;
             }
             task.retry();
+        },
+        $$notifyParentEvent(event, data) {
+            notifyParentFrame(_.merge({
+                mst_event_name: event,
+            }, data));
+        },
+        $$goto(href, query, replace) {
+            if(_.startsWith(href, 'http')) {
+                openUrl(href, replace);
+                return;
+            }
+            this.$router[replace?'replace':'push']({ path: href, query: query});
+        },
+        $$runSystemTool(toolID, param) {
+            if(_.isObject(param)) {
+                param = JSON.stringify(param);
+            }
+            if(isCurrentClient('wx')) {
+                window.open(`${g_callToolUrl}&toolID=${toolID}&param=${param}`,  '_top');
+            } else if(isCurrentClient('desktop')) {
+                window.open(`${g_callToolUrl}&toolID=${toolID}&param=${param}`, '_blank');
+            } else if(isCurrentClient('mobile')) {
+                require('plugin/API').callAppAPI('gotoRunSystemTool', Object.assign({
+                    toolID : toolID,
+                    param: param,
+                }));
+            }
+        },
+        $$startLoading() {
+            this.BIND_CURRENT({ loading: true });
+        },
+        $$endLoading() {
+            this.BIND_CURRENT({ loading: false });
         },
         _$$init() {
             if(! this.$$contextName) {

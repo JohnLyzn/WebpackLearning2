@@ -58,7 +58,7 @@ export default class ServiceInjectable extends Injectable {
         }
         const service = new serviceType();
         for(let fnName of Object.getOwnPropertyNames(serviceType.prototype)) {
-            if(fnName == 'constructor') {
+            if(fnName == 'constructor' || _.startsWith(fnName, '_')) {
                 continue;
             }
             const fn = service[fnName].bind(service);

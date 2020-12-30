@@ -56,10 +56,16 @@ export default class BaseService {
 				},
 				remove: (params, placeholders, args) => {
 					const obj = this._getObjInCache(placeholders['removeObjId'], placeholders['objType'], params, placeholders);
+					if(! obj) {
+						return {
+							objs: [],
+							singleResult: false,
+						};
+					}
 					_updatingCache(params, placeholders, obj);
 					this._removeObjInCache(placeholders['removeObjId'], placeholders['objType'], params, placeholders);
 					return {
-						objs: [obj],
+						objs: obj ? [obj] : [],
 						singleResult: true,
 					};
 				},
@@ -102,6 +108,12 @@ export default class BaseService {
 				},
 				remove: (params, placeholders, args) => {
 					const objs = this._getObjsInCache(placeholders['removeObjIds'], placeholders['objType'], params, placeholders);
+					if(! objs || ! objs.length) {
+						return {
+							objs: [],
+							singleResult: false,
+						};
+					}
 					if(! args.innerCall) {
 						for(let obj of objs) {
 							_updatingCache(params, placeholders, obj);
@@ -109,7 +121,7 @@ export default class BaseService {
 					}
 					this._removeObjsInCache(placeholders['removeObjIds'], placeholders['objType'], params, placeholders);
 					return {
-						objs: objs,
+						objs: objs || [],
 						singleResult: false,
 					};
 				},
@@ -240,6 +252,9 @@ export default class BaseService {
 						removeObjIds: placeholders['removeObjIds'],
 						objType: placeholders['subObjType'],
 					}, args);
+					if(! cacheable.objs.length) {
+						return cacheable;
+					}
 					for(let obj of cacheable.objs) {
 						const parentObjId = _getCacheParentObjId(placeholders, obj);
 						if(! parentObjId) {
@@ -293,7 +308,7 @@ export default class BaseService {
 		params = params || {};
 		callbacks = callbacks || {};
 		task = params.task || task;
-		placeholders._handling = HANDLING__CREATE;
+		placeholders._handling = placeholders._handling || HANDLING__CREATE;
 		placeholders._ajaxMethod = placeholders['ajaxMethod'] || 'POST';
 		placeholders._ajaxParamsHandleFn = null;
 		placeholders._ajaxSuccessFn = async (json) => {
@@ -334,7 +349,7 @@ export default class BaseService {
 		if(params['onlyRemoveCache'] || placeholders['onlyRemoveCache']) {
 			return success4Inner();
 		}
-		placeholders._handling = HANDLING__DELETE;
+		placeholders._handling = placeholders._handling || HANDLING__DELETE;
 		placeholders._ajaxMethod = placeholders['ajaxMethod'] || 'POST';
 		placeholders._ajaxParamsHandleFn = null;
 		placeholders._ajaxSuccessFn = (json) => {
@@ -354,7 +369,7 @@ export default class BaseService {
 		params = params || {};
 		callbacks = callbacks || {};
 		task = params.task || task;
-		placeholders._handling = HANDLING__UPDATE;
+		placeholders._handling = placeholders._handling || HANDLING__UPDATE;
 		placeholders._ajaxMethod = placeholders['ajaxMethod'] || 'POST';
 		placeholders._ajaxParamsHandleFn = null;
 		placeholders._ajaxSuccessFn = async (json) => {
@@ -430,22 +445,30 @@ export default class BaseService {
 			const promise = new Promise((resolve) => {
 				// 不setTimeou会抢占, 就无法进行正确的resolve处理了
 				setTimeout(() => {
-					// 根据传参判断是否需要缓存初始化完成回调处理
-					if(needReadyRetry) {
-						// 设置缓存读取成功的回调
-						placeholders._cacheReadyFn = () => {
-							// 递归调用一下
-							delete placeholders._cacheReadyFn;
-							resolve(_loadCache4Inner(false));
-						};
-					}
-					// 查询缓存
+					// 先直接查一次缓存，看是否能够取到结果
 					let cacheable = this.queryFromCache(params, placeholders, callbacks);
-					// 查不到结果, 可能是缓存未初始化完成, 也可能是没有缓存
-					if(! cacheable.objs.length) {
+					// 查到结果, 直接返回
+					if(cacheable.objs.length) {
+						resolve(success4Inner(cacheable, { $fromCache: true }));
 						return;
 					}
-					resolve(success4Inner(cacheable, { $fromCache: true }));
+					// 查不到结果，可能是缓存未初始化完成, 也可能是没有缓存
+					// 根据传参判断是否需要缓存初始化完成回调处理
+					if(! needReadyRetry) {
+						return;
+					}
+					// 设置缓存读取成功的回调
+					placeholders._cacheReadyFn = () => {
+						delete placeholders._cacheReadyFn;
+						// 成功调用
+						let cacheable = this.queryFromCache(params, placeholders, callbacks);
+						if(! cacheable.objs.length) {
+							return;
+						}
+						resolve(success4Inner(cacheable, { $fromCache: true }));
+					};
+					// 带上缓存读取成功回调后重新查询，如果是缓存未初始化则在初始化完成后会重新调用
+					this.queryFromCache(params, placeholders, callbacks);
 				}, 0);
 			});
 			return promise;
@@ -469,7 +492,7 @@ export default class BaseService {
 			}
 		}
 		// 否则准备ajax请求
-		placeholders._handling = HANDLING__QUERY;
+		placeholders._handling = placeholders._handling || HANDLING__QUERY;
 		placeholders._ajaxMethod = placeholders['ajaxMethod'] || 'GET';
 		placeholders._ajaxParamsHandleFn = (ajaxParams) => {
 			let ajaxParamsIntercepter = placeholders['ajaxParamsIntercepter'];
@@ -509,6 +532,12 @@ export default class BaseService {
 	queryFromCache(params, placeholders, callbacks) {
 		let pagination = params['pagination'] || placeholders['pagination'];
 		let cacheSearches = placeholders['cacheSearches'] || params['cacheSearches'];
+		// 如果有包含查询的参数则跳过缓存查询
+		for(let queryName of Config.QUERY_PARAM_NAMES) {
+			if(! cacheSearches && params[queryName]) {
+		 		return { objs: '' };
+		 	}
+		}
 		let cacheable = this._handleCacheByRule(params, placeholders, 'get');
 		if(cacheSearches) {
 			cacheable.objs = _searchCache(cacheable.objs, cacheSearches, cacheSearches.strict);
@@ -592,9 +621,13 @@ export default class BaseService {
 		if(! Utils.isString(cacheObj.id)) {
 			throw new Error('请保证模型的id为字符串类型');
 		}
+		if(params['preventCache'] || placeholders['preventCache']) {
+			return cacheObj;
+		}
+		const cacheOptions = _getCacheOptions(params, placeholders);
 		const cacheManager = _getCacheManager(params, placeholders, objType);
 		const cache = cacheManager.cacheOf(objType);
-		_putCache(cache, cacheObj);
+		_putCache(cache, cacheObj, cacheOptions);
 		return this._getObjInCache(cacheObj.id, objType, params, placeholders);
 	};
 	
@@ -692,7 +725,7 @@ export default class BaseService {
 			return false;
 		}
 		/* 复制的属性不需要包括父子关系配置, 已由最外层决定了, 这里只看查询的对象本身 */
-		const queryPlaceholders = {};
+		const queryPlaceholders = { _handling: placeholders._handling };
 		for(let copyKey of ['objId', 'objIds', 'objType', 'model', 'url', 'ajaxParams']) {
 			if(! detailFetchPlaceholders.hasOwnProperty(copyKey)
 				|| ! detailFetchPlaceholders[copyKey]) {
@@ -1554,7 +1587,7 @@ const _getObjFromJson = (json, paths, defaultVal) => {
 			}
 		}
 	}
-	return [json];
+	return defaultVal;
 };
 
 /**

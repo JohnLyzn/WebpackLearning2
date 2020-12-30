@@ -72,7 +72,6 @@
         span {
             font-size: px2rem(14px);
             color: $fc_tip;
-            text-align: center;
         }
     }
 </style>

@@ -118,9 +118,6 @@
         .van-search__action {
            font-size: px2rem(14px);
         }
-        .van-cell__value {
-            width: 100%;
-        }
         .mu-flat-button {
             min-width: px2rem(32px);
         }

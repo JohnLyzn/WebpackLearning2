@@ -321,6 +321,7 @@ npm i node-sass --sass_binary_site=https://npm.taobao.org/mirrors/node-sass/
 >> *input-field*
 >>> *同时支持输入字符串，actionsheet风格列表选择（标志了options参数即变成列表选择，配合expanding参数支持树型选择以及配合mutiple参数支持多选），以及MuseUI的text-field的基本属性。可自行查看源码理解使用。*
 >>```html
+>>```html
 >><input-field v-model="OBJ.selected"
 >>    :options="getObj(OBJ.expanding.id).rows"
 >>    option-id-key="id"
@@ -328,10 +329,10 @@ npm i node-sass --sass_binary_site=https://npm.taobao.org/mirrors/node-sass/
 >>    option-editable 使可添加不存在的值
 >>    option-multiple 使可多选
 >>    option-searchable
->>    option-search-value.sync="OBJ.query.name"
+>>    :option-search-value.sync="OBJ.query.name"
 >>    option-expandable
 >>    :option-root="OBJ.root"
->>    :option-expanding="OBJ.expanding"
+>>    :option-expanding.sync="OBJ.expanding"
 >>    :option-loading="getObj(OBJ.expanding.id).$loading"
 >>    :option-refreshing="getObj(OBJ.expanding.id).$refreshing"
 >>    :option-load-end="getObj(OBJ.expanding.id).pagination.$pagingEnd"

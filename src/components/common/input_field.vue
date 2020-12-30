@@ -1,6 +1,10 @@
 <template>
-    <div class="input-field">
-        <div class="input-field__input"
+    <div class="input-field"
+        :class="{
+            'input-field--combine':isCombine,
+        }">
+        <div v-if="!isCombine"
+            class="input-field__input"
             :class="{
                 'input-field__input--inline':isInline,
                 'input-field__input--readonly':isReadOnly,
@@ -62,7 +66,7 @@
             </mu-text-field>
         </div>
         <component v-if="isOptional"
-            :is="isDesktop?'mu-popover':'mu-bottom-sheet'" 
+            :is="componentName" 
             class="input-field__options"
             :class="{
                 'input-field__options--desktop': isDesktop,
@@ -70,7 +74,8 @@
             :trigger="$el"
             :docked="false"
             :open.sync="isPicking">
-            <div class="input-field__options-toolbar content__side">
+            <div v-if="!isCombine"
+                class="input-field__options-toolbar content__side">
                 <mu-button
                     flat
                     color="secondary"
@@ -214,15 +219,15 @@
             value: {
                 type: String,
             },
-            focused: {
-                type: Boolean,
-                default: false,
-            },
             modelExtractKey: {
                 type: String,
                 default: '',
             },
             inline: {
+                type: Boolean,
+                default: false,
+            },
+            combine: {
                 type: Boolean,
                 default: false,
             },
@@ -361,12 +366,6 @@
             };
         },
         computed: {
-            isDesktop() {
-                if(window.innerWidth < 800) {
-                    return false;
-                }
-                return true;
-            },
             optionsTrigger() {
                 console.log(this.$el);
                 if(this.isDesktop) {
@@ -390,8 +389,23 @@
                 }
                 return '请输入内容';
             },
+            componentName() {
+                if(this.isCombine) {
+                    return 'div';
+                }
+                return this.isDesktop ? 'mu-popover' : 'mu-bottom-sheet';
+            },
+            isDesktop() {
+                if(window.innerWidth < 800) {
+                    return false;
+                }
+                return true;
+            },
             isInline() {
                 return this.inline;
+            },
+            isCombine() {
+                return this.combine;
             },
             isReadOnly() {
                 if(this.isOptional && ! this.optionEditable) {
@@ -497,17 +511,6 @@
                     return;
                 }
                 this.inputValue = this._toInputValue(newValue);
-            },
-            'focused'(newValue) {
-                this.$nextTick(() => {
-                    if(this.inputFocused === newValue) {
-                        return;
-                    }
-                    this.inputFocused = newValue;
-                });
-            },
-            'inputFocused'(newValue) {
-                this.$emit('update:focused', newValue);
             },
             'inputValue'(newValue) {
                 if(this.isMultiple) {
@@ -990,14 +993,20 @@
         width: 100%;
         display: flex;
         position: relative;
+        &.input-field--combine {
+            .input-field__options--desktop {
+                width: 100%;
+                min-width: auto;
+            }
+        }
         .input-field__title {
             display: flex;
             align-items: center;
-            line-height: 1.3rem;
+            line-height: px2rem(20px);
             overflow: hidden;
             cite {
-                width: 1rem;
-                padding: 0 .3rem;
+                width: px2rem(16px);
+                padding: 0 px2rem(8px);
                 color: red;
             }
             span {
@@ -1006,36 +1015,26 @@
                 flex: 1 1 auto;
             }
             i {
-                width: 1rem;
-                padding: 0 .3rem;
+                width: px2rem(16px);
+                padding: 0 px2rem(8px);
             }
         }
         .input-field__input {
             flex: 1 1 auto;
-            .mint-field-core {
-                border-bottom: 1px solid $bdc_main;
-            }
             &.input-field__input--inline {
-                width: 180px;
+                width: px2rem(180px);
                 .mu-input {
                     margin: 0;
                 }
             }
+            &.input-field__input--combine {
+                
+            }
             &.input-field__input--readonly {
-                .mint-field-core {
-                    border: none;
-                }
-                .mint-field-clear {
-                    display: none;
-                }
+                
             }
             &.input-field__input--optional {
-                .mint-field-core {
-                    cursor: pointer;
-                }
-                .mint-field-clear {
-                    margin-right: 2rem;
-                }
+                
             }
             &.input-field__input--disabled {
                 .mu-input-action-icon, input, textarea {
@@ -1052,24 +1051,24 @@
                 .mu-input-content>input,
                 .mu-input-content>textarea,
                 .mu-input-content>.mu-text-field-multiline {
-                    min-height: 44px;
+                    min-height: px2rem(44px);
                 }
             }
             .input-field__input-multi-block {
                 width: 100%;
-                min-height: 44px;
+                min-height: px2rem(44px);
                 height: 100%;
-                max-height: 648px;
+                max-height: px2rem(648px);
                 align-self: start;
                 overflow-y: auto;
                 text-align: left;
-                padding-bottom: 8px;
-                padding-right: 8px;
+                padding-bottom: px2rem(8px);
+                padding-right: px2rem(8px);
                 .mu-chip {
-                    margin-top: 4px;
-                    margin-left: 4px;
+                    margin-top: px2rem(4px);
+                    margin-left: px2rem(4px);
                     max-width: 80%;
-                    line-height: 24px;
+                    line-height: px2rem(24px);
                     overflow: hidden;
                     display: inline-block;
                     word-break: break-all;
@@ -1085,13 +1084,13 @@
     }
     .input-field__options {
         width: 100%;
-        min-height: 360px;
+        min-height: px2rem(360px);
         &.input-field__options--desktop {
             width: initial;
-            min-width: 480px;
+            min-width: px2rem(480px);
             height: 60vh;
-            max-height: 568px;
-            padding: 8px; 
+            max-height: px2rem(568px);
+            padding: px2rem(8px); 
             display: flex;
             flex-direction: column;
             .input-field__options-list {
@@ -1100,28 +1099,28 @@
             }
         }
         .iconfont {
-            font-size: 24px;
+            font-size: px2rem(24px);
             color: #999;
         }
         .input-field__options-toolbar {
             height: 36px;
             border-bottom: 1px solid $bdc_main;
             span {
-                height: 2rem;
-                line-height: 2rem;
-                padding: 0 1rem;
-                font-size: 1rem;
+                height: px2rem(32px);
+                line-height: px2rem(32px);
+                padding: 0 px2rem(16px);
+                font-size: px2rem(16px);
             }
         }
         .input-field__options-search {
-            padding: .5rem;
+            padding-bottom: px2rem(8px);
         }
         .input-field__options-expandpath {
-            max-height: 48px;
+            max-height: px2rem(48px);
             display: flex;
             border-top: 1px solid $bdc_main;
             &>* {
-                max-height: 48px;
+                max-height: px2rem(48px);
             }
         }
         .input-field__options-list {
@@ -1130,9 +1129,9 @@
             border-top: 1px solid $bdc_main;
             -webkit-overflow-scrolling: touch;
             .mu-list {
-                min-height: 120px;
+                min-height: px2rem(120px);
                 padding-top: 0;
-                font-size: 16px;
+                font-size: px2rem(14px);
                 overflow: hidden;
             }
         }

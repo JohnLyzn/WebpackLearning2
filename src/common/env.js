@@ -318,12 +318,12 @@ export const clearMessager = () => {
 };
 
 import BaseService from 'service/base_service';
-
+const baseService = new BaseService();
 /**
  * 获取一些基础配置信息和作为第一个连接尝试
  */
 export const getConfigs = async (callbacks) => {
-	const config = await new BaseService().queryTemplate({
+	const config = await baseService.queryTemplate({
 		singleResult: true,
 	}, callbacks, {
 		ajaxParams: {
@@ -495,6 +495,23 @@ export const style = (dom, prop) => {
 };
 
 /**
+ * 设置元素的样式
+ */
+export const setStyle = (dom, selector, prop, value) => {
+	if(! selector) {
+		dom.style[prop] = value;
+		return;
+	}
+	const selectDoms = dom.querySelectorAll(selector);
+	if(! selectDoms || ! selectDoms.length) {
+		return;
+	}
+	for(let selectDom of selectDoms) {
+		selectDom.style[prop] = value;
+	}
+};
+
+/**
  * 获取元素的滚动容器
  */
 export const scrollParent = (dom) => {
@@ -612,7 +629,7 @@ export const notifyParentFrame = (data) => {
  * 处理分享到微信
  */
 export const shareToWx = async (config) => {
-	if(isCurrentClient('pc') || config.forceQrCode) { /* PC */
+	if(isCurrentClient('desktop') || config.forceQrCode) { /* PC */
 		if(! config.dom) {
 			config.dom = genterateDefaultQrCodeDom();
 		}
@@ -649,7 +666,7 @@ export const shareToWx = async (config) => {
 		});
 		return;
 	}
-	if(isCurrentClient('app')) { /* APP */
+	if(isCurrentClient('mobile')) { /* APP */
 		require('plugin/API').callAppAPI('shareToWX', {
 			url: config.url,
 			title: config.title,

@@ -1,4 +1,4 @@
-<template>
+<template xmlns:v-slot="http://www.w3.org/1999/XSL/Transform">
     <div class="adaptable-avatar"
         :class="{
             'adaptable-avatar--square':square,
@@ -9,15 +9,21 @@
             :text-color="textColorComputed"
             :size="size">
             <slot>
-                <span v-if="text"
+                <!--<span v-if="text"
                     :style="{'font-weight':textFontWeightComputed}">
                     {{text}}
-                </span>
-                <van-image v-else-if="url"
+                </span>-->
+                <van-image v-if="url"
                     lazy-load
                     fit="contain"
-                    :src="url"
-                />
+                    :src="url">
+                    <template v-slot:error>
+                        <span :style="{'font-weight':textFontWeightComputed,
+                                        'color': textColorComputed }">
+                            {{text ? text.substr(0,1) : '空'}}
+                        </span>
+                    </template>
+                </van-image>
                 <mu-icon v-else-if="icon"
                     :value="icon"
                     :color="iconColorComputed"
@@ -193,7 +199,9 @@
         width: auto;
         height: auto;
         overflow: hidden;
-        display: inherit;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         content: '#{px2rem(10px)}';
         .mu-avatar {
             overflow: hidden;
@@ -203,6 +211,15 @@
             height: 100%;
             img {
                 border-radius: initial;
+            }
+
+            .van-image__error{
+                background-color: transparent;
+
+                span{
+                    font-weight: 600 !important;
+                    font-size: px2rem(24);
+                }
             }
         }
         &.adaptable-avatar--square {

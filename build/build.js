@@ -5,6 +5,8 @@ const path = require('path');
 const webpack = require('webpack');
 
 const context = require('./context');
+const modifyFile = require('./modifyFile');
+
 
 const ora = require('ora');
 
@@ -33,5 +35,7 @@ webpack(webpackConfig, function(err, stats) {
         chunks: false,
         chunkModules: false
     }) + '\n');
+    modifyFile.modifyFile(assetsPath);
+
 });
 

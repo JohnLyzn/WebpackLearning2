@@ -97,6 +97,10 @@
                 type: Array,
                 default: '',
             },
+            tabFilter: {
+                type: Function,
+                default: '',
+            },
             simple: {
                 type: Boolean,
                 default: false,
@@ -244,10 +248,10 @@
                 }
             },
             mergeListItems(items) {
+                this.LIST.rows = [];
                 if(! items || ! items.length) {
                     return;
                 }
-                this.LIST.rows = [];
                 for(let item of items) {
                     const processedItem = this._toItem(item, this.LIST.rowMap);
                     if(! processedItem) {
@@ -260,6 +264,9 @@
             getTabItem(listItem) {
                 const tabItemSrc = this._toTabBy(listItem.src);
                 if(! tabItemSrc) {
+                    return '';
+                }
+                if(this.tabFilter && ! this.tabFilter(tabItemSrc)) {
                     return '';
                 }
                 const tabId = this._getId(tabItemSrc);

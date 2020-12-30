@@ -1,7 +1,7 @@
 <template>
     <div class="duplex-button"
         :class="{'duplex-button--plain':isPlain}">
-        <van-button class="duplex-button__left van-ellipsis"
+        <van-button class="duplex-button__left"
             v-bind="$attrs"
             :icon="isIcon"
             :plain="isPlain"
@@ -176,7 +176,7 @@
                 };
             },
             clickMenuItem(menuItem) {
-                this.$emit('menu-click', menuItem);
+                this.$emit('menu-click', menuItem.name);
             },
             closeMenu() {
                 this.MENU.opening = false;
@@ -211,6 +211,11 @@
             padding: 0 px2rem(12px);
             border-right: 0;
             @include border-radius(2px 0 0 2px);
+            .van-button__text {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-break: keep-all;
+            }
         }
         .duplex-button__right {
             overflow: hidden;
@@ -221,7 +226,8 @@
             }
         }
         @at-root .duplex-button__popover {
-            padding: 8px;
+            border-radius: px2rem(8px);
+            padding: px2rem(8px) 0;
         }
     }
 </style>

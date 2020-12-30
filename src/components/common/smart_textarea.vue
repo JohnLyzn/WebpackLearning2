@@ -24,15 +24,6 @@
                 :accept="acceptImgTypes"
                 multiple="multiple" />
         </form>
-        <!-- 特殊格式内容的原型 -->
-        <!-- <div class="smart-textarea__prototype">
-            <div class="smart-textarea__input-item smart-textarea__input-file">
-                <mu-flex align-items="center"
-                    justify-content="center">
-                    fileContent
-                </mu-flex>
-            </div>
-        </div> -->
         <!-- 弹出内容 -->
         <mu-popover ref="inputPop"
             class="smart-textarea__popover"
@@ -40,6 +31,7 @@
             :open.sync="POP.opening"
             :trigger="POP.trigger"
             :placement="POP.placement"
+            @scroll.native.stop.prevent
             @click.stop>
             <div class="smart-textarea__popover-body">
                 <van-tabs v-if="popTabs"
@@ -53,23 +45,26 @@
                             <mu-icon :value="tab.icon"></mu-icon>
                         </template>
                         <div class="smart-textarea__popover-list">
-                            <div v-for="popItem of popItems"
-                                :key="popItem.id"
+                            <div v-for="symbolItem of symbolItems"
+                                :key="symbolItem.id"
                                 class="smart-textarea__popover-list-item">
                                 <mu-checkbox v-if="popMultiSelect
                                     &&INPUT.symbol.name"
-                                    v-model="POP.picked[INPUT.symbol.name]"
-                                    :value="popItem.id"
-                                    @change="onPickedPopItemChange()">
+                                    v-model="POP.pickedIds[INPUT.symbol.name]"
+                                    :value="symbolItem.id"
+                                    @change="onPickedSymbolItemChange()">
                                 </mu-checkbox>
-                                <div @click="_togglePickPopItem(popItem)">
+                                <mu-flex class="fill"
+                                    align-items="center"
+                                    justify-content="center"
+                                    @click="_togglePickSymbolItem(symbolItem)">
                                     <slot name="pop-item"
-                                        :item="popItem">
-                                        <span>{{popItem.name}}</span>
+                                        :item="symbolItem">
+                                        <span>{{symbolItem.name}}</span>
                                     </slot>
-                                </div>
+                                </mu-flex>
                             </div>
-                            <p v-show="!popItems.length"
+                            <p v-show="!symbolItems.length"
                                 class="tip">
                                 没有可选结果~
                             </p>
@@ -78,23 +73,26 @@
                 </van-tabs>
                 <div v-else
                     class="smart-textarea__popover-list">
-                    <div v-for="popItem of popItems"
-                        :key="popItem.id"
+                    <div v-for="symbolItem of symbolItems"
+                        :key="symbolItem.id"
                         class="smart-textarea__popover-list-item">
                         <mu-checkbox v-if="popMultiSelect
                             &&INPUT.symbol.name"
-                            v-model="POP.picked[INPUT.symbol.name]"
-                            :value="popItem.id"
-                            @change="onPickedPopItemChange()">
+                            v-model="POP.pickedIds[INPUT.symbol.name]"
+                            :value="symbolItem.id"
+                            @change="onPickedSymbolItemChange()">
                         </mu-checkbox>
-                        <div @click="_togglePickPopItem(popItem)">
+                        <mu-flex class="fill"
+                            align-items="center"
+                            justify-content="center"
+                            @click="_togglePickSymbolItem(symbolItem)">
                             <slot name="pop-item"
-                                :item="popItem">
-                                <span>{{popItem.name}}</span>
+                                :item="symbolItem">
+                                <span>{{symbolItem.name}}</span>
                             </slot>
-                        </div>
+                        </mu-flex>
                     </div>
-                    <p v-show="!popItems.length"
+                    <p v-show="!symbolItems.length"
                         class="tip">
                         没有可选结果~
                     </p>
@@ -143,7 +141,7 @@
                 type: Object,
                 default: '',
             },
-            popItems: {
+            symbolItems: {
                 type: Array,
                 default: '',
             },
@@ -171,6 +169,9 @@
         data() {
             return {
                 acceptImgTypes: Config.ACCEPT_IMG_TYPES,
+                META: {
+                    lineHeight: 0,
+                },
                 INPUT: {
                     focused: false,
                     enableFakeCursor: false,
@@ -187,10 +188,10 @@
                     opening: false,
                     placement: 'bottom-start',
                     activedTab: '',
-                    fakeSymbol: '',
+                    virtualSymbol: '',
                     itemMap: {},
-                    picked: {},
-                    lastPicked: {},
+                    pickedIds: {},
+                    lastPickedIds: {},
                     trigger: '',
                 },
                 MUTATION: {
@@ -211,12 +212,13 @@
             },
             updateInput() {
                 return _.throttle(() => {
-                    if(! _.trim(this.inputDom.innerText)) {
+                    if(this.inputDom.innerHTML.indexOf('smart-textarea__input-item') == -1
+                        && ! _.trim(this.inputDom.innerText)) {
                         this.$emit('input', '');
                         return;
                     }
                     this.$emit('input', this.content());
-                }, 1000);
+                }, 500);
             },
             symbolNameMap() {
                 if(! _.isObject(this.symbols)) {
@@ -241,22 +243,22 @@
                 }
                 return this.INPUT.symbol.name;
             },
-            currentPopItemSymbolType() {
-                if(this.POP.fakeSymbol) {
-                    return this.POP.fakeSymbol;
+            currentSymbolItemSymbolType() {
+                if(this.POP.virtualSymbol) {
+                    return this.POP.virtualSymbol;
                 }
                 return this.currentSymbolType;
             },
-            currentPopItemSymbolTypeName() {
-                if(this.POP.fakeSymbol) {
-                    return this.POP.fakeSymbol.name;
+            currentSymbolItemSymbolTypeName() {
+                if(this.POP.virtualSymbol) {
+                    return this.POP.virtualSymbol.name;
                 }
                 return this.currentSymbolTypeName;
             },
         },
         watch: {
-            'popItems'(newVal) {
-                this._initPopItemMap(newVal);
+            'symbolItems'(newVal) {
+                this._initSymbolItemMap(newVal);
             },
             'popOpen'(newVal) {
                 if(newVal === this.POP.opening) {
@@ -282,7 +284,7 @@
                 if(! newVal) {
                     return;
                 }
-                this._initPopItemMap();
+                this._initSymbolItemMap();
             },
             'POP.opening'(newVal) {
                 this.$nextTick(() => {
@@ -298,6 +300,7 @@
                 this.INPUT.focused = true;
                 this.$emit('update:focused', true);
                 if(this.inputDom) {
+                    this._generateMeta(); /* 只会生成一次 */
                     this.inputDom.focus();
                 }
             },
@@ -307,6 +310,76 @@
                 if(this.inputDom) {
                     this.inputDom.blur();
                 }
+            },
+            insertBackSpace() {
+                if(! this.inputDom) {
+                    return;
+                }
+                this.inputDom.focus();
+                this._deleteCursorPre();
+            },
+            _deleteSinceEnd() {
+                const selection = this._selection();
+                if(selection && ! selection.isCollapsed) {
+                    selection.deleteFromDocument();
+                    return;
+                }
+                const rangeNow = this.INPUT.lastRange || this._rangeOfCursor();
+                const range = document.createRange();
+                const endOffset = rangeNow.endOffset - 1;
+                let node = _.first(this.inputDom.childNodes);
+                let count = 0;
+                while(node) {
+                    if(count < endOffset) {
+                        count += Math.max(node.textContent.length, 1);
+                        node = node.nextSibling;
+                        continue;
+                    }
+                    if(this._isTextNode(node, true)
+                        && ! _.trim(node.textContent)) {
+                        node = node.previousSibling;
+                        continue;
+                    }
+                    if(this._isTextNode(node, true)) {
+                        range.setStart(node, 0);
+                        range.setEnd(node, Math.max(count - endOffset, node.textContent.length));
+                        break;
+                    }
+                    range.selectNode(node);
+                    break;
+                }
+                this._select(range);
+                range.deleteContents();
+                range.collapse(true);
+            },
+            _deleteCursorPre() {
+                const selection = this._selection();
+                if(selection && ! selection.isCollapsed) {
+                    selection.deleteFromDocument();
+                    return;
+                }
+                const rangeNow = this.INPUT.lastRange || this._rangeOfCursor();
+                const endNode = rangeNow.endContainer;
+                if(endNode === this.inputDom) {
+                    this._deleteSinceEnd();
+                    return;
+                }
+                const endOffset = rangeNow.endOffset;
+                if(endOffset == 0
+                    || this._isSplitNode(endNode)) {
+                    this._removeNode(endNode);
+                    return;
+                }
+                const range = document.createRange();
+                if(this._isTextNode(endNode, true)) {
+                    range.setStart(endNode, endOffset - 1);
+                    range.setEnd(endNode, endOffset);
+                } else {
+                    range.selectNode(endNode);
+                }
+                this._select(range);
+                range.deleteContents();
+                range.collapse(true);
             },
             insertFile() {
                 const fileInputDom = this.$refs.fileInput;
@@ -328,17 +401,18 @@
                         && this.INPUT.symbol.indicator !== symbol) {
                         this._resetInputSymbol();
                     }
-                    this._setFakeSymbol(symbol);
+                    this._setVirtualSymbol(symbol);
                     if(clearFirst) {
-                        this._resetPickedPopItems();
+                        this._resetPickedSymbolItems();
                     }
                     if(! items.length) {
+                        this._setVirtualSymbol();
                         return;
                     }
                     this.$nextTick(() => {
-                        this._mergePopItemMap(this.currentPopItemSymbolTypeName, items);
+                        this._mergeSymbolItemMap(this.currentSymbolItemSymbolTypeName, items);
                         for(let item of items) {
-                            this._pickPopItem(item);
+                            this._pickSymbolItem(item);
                         }
                     });
                     return;
@@ -358,7 +432,7 @@
                 this.closePop();
                 this._endSymbolQueryInputing();
                 this._resetInputSymbol();
-                this._setFakeSymbol();
+                this._setVirtualSymbol();
             },
             reset() {
                 if(! this.inputDom) {
@@ -369,12 +443,25 @@
                     this._removeNode(childNode);
                 });
             },
+            _generateMeta() {
+                if(! this.inputDom) {
+                    return;
+                }
+                if(! this.META.lineHeight) {
+                    this.META.lineHeight = window.getComputedStyle(this.inputDom)
+                            .getPropertyValue('line-height');
+                }
+            },
             _isImage(file) {
                 return isImgFile(file);
             },
-            _isTextNode(node) {
-                if(! node || node.$wrapped 
-                    || node.$splited || node.$splitFor) {
+            _isTextNode(node, pure) {
+                if(! node ) {
+                    return false;
+                }
+                if(! pure && (node.$wrapped 
+                    || node.$splited 
+                    || node.$splitFor)) {
                     return false;
                 }
                 return node.nodeName === '#text';
@@ -423,10 +510,16 @@
                 } else {
                     containerDom.appendChild(dom);
                 }
+                if(attachment) {
+                    attachment.type = type;
+                }
                 if(attachment && attachment.label) {
                     const labelDom = document.createElement('label');
                     labelDom.innerText = attachment.label;
                     containerDom.appendChild(labelDom);
+                }
+                if(attachment && attachment.id) {
+                    wrapperDom.id = attachment.id;
                 }
                 wrapperDom.appendChild(containerDom);
                 return wrapperDom;
@@ -449,6 +542,10 @@
                 }
                 const imgDom = document.createElement('img');
                 imgDom.src = imgUrl;
+                imgDom.onload = () => {
+                    file.width = imgDom.width;
+                    file.height = imgDom.height;
+                };
                 return this._insertElementTypeInput(this._wrapElementInput(imgDom, 'img', {
                     type: 'img',
                     file: file,
@@ -526,6 +623,9 @@
             _formatAttachmentStr(type, content, extra) {
                 return `[:${type}/${content}/${extra||''}]`;
             },
+            _escapeAttachmentSymbol(str) {
+                return str.replace(/\[\:/g, '\\[\\:');
+            },
             _translateAttachment(container, attachmentNode) {
                 if(! container || ! attachmentNode) {
                     return;
@@ -548,9 +648,9 @@
                         break;
                     case 'tag':
                         container.content += this._formatAttachmentStr(
-                            attachment.symbol.name, 
-                            attachment.data.id, 
-                            attachment.data.name
+                            _.toUpper(attachment.symbol.name), 
+                            attachment.symbolItem.id, 
+                            attachment.symbolItem.name
                         );
                         break;
                 }
@@ -562,7 +662,7 @@
                 for(let node of parentNode.childNodes) {
                     /* 不能用isTextNode判断, 自动融合字符串时会导致与分隔符合并 */
                     if(node.nodeType === 3) {
-                        container.content += node.textContent;
+                        container.content += this._escapeAttachmentSymbol(node.textContent);
                         continue;
                     }
                     if(this._isWrappedNode(node)) {
@@ -573,7 +673,7 @@
                         continue;
                     }
                     if(node.$tabed) {
-                        container.content += node.innerText;
+                        container.content += this._escapeAttachmentSymbol(node.innerText);
                         continue;
                     }
                     if(this._isInnerBlock(node)) {
@@ -620,8 +720,9 @@
                 if(! symbolType || ! symbolType.restore) {
                     return;
                 }
-                this._setFakeSymbol(symbolType);
+                this._setVirtualSymbol(symbolType);
                 symbolType.restore(value, extra);
+                this._setVirtualSymbol();
             },
             _restorePlain(content) {
                 if(! content) {
@@ -674,7 +775,6 @@
                 if(! this._isValidRange(range)) {
                     return;
                 }
-                this.INPUT.lastRange = range;
                 const selection = this._selection();
                 selection.removeAllRanges();
                 selection.addRange(range);
@@ -775,7 +875,7 @@
                 let key = isBefore ? 'previousSibling' : 'nextSibling';
                 let current = node;
                 while(current) {
-                    if(! this._isTextNode(current)) {
+                    if(! this._isTextNode(current, true)) {
                         return current;
                     }
                     if(! skipClimp && ! current[key]
@@ -907,11 +1007,18 @@
                 }
                 return result;
             },
+            _storeLastRange() {
+                const lastRange = this._rangeOfCursor(true);
+                if(! lastRange) {
+                    return;
+                }
+                this.INPUT.lastRange = lastRange.cloneRange();
+            },
             _locationOfRange(range) {
                 if(! range) {
                     return;
                 }
-                this.INPUT.lastRange = range;
+                this._storeLastRange();
                 this._locateFakeCursor(true);
                 const beforeNode = this.cursorDom.previousSibling || this.inputDom;
                 const afterNode = this.cursorDom.nextSibling;
@@ -969,7 +1076,7 @@
                 }
                 return true;
             },
-            _rangeOfCursor() {
+            _rangeOfCursor(pure) {
                 if(! this.inputDom) {
                     return;
                 }
@@ -978,13 +1085,13 @@
                 if (typeof win.getSelection != 'undefined') {
                     const sel = win.getSelection();
                     if(! sel.isCollapsed) {
-                        return this._moveCursorAfter(sel.focusNode);
+                        return pure ? null : this._moveCursorAfter(sel.focusNode);
                     }
                     if (! sel.rangeCount) {
-                        return this._moveCursorAfter(this.inputDom);
+                        return pure ? null : this._moveCursorAfter(this.inputDom);
                     }
                     const range = win.getSelection().getRangeAt(0);
-                    if(! this._isValidRange(range)) {
+                    if(! pure && ! this._isValidRange(range)) {
                         return this._moveCursorAfter(this._findValidStartAfterNode(this.inputDom));
                     }
                     return range;
@@ -992,7 +1099,7 @@
                 const sel = doc.selection;
                 if (sel && sel.type != 'Control') {
                     const range = sel.createRange();
-                    if(! this._isValidRange(range)) {
+                    if(! pure && ! this._isValidRange(range)) {
                         return this._moveCursorAfter(this._findValidStartAfterNode(this.inputDom));
                     }
                     return range;
@@ -1034,7 +1141,7 @@
                 }
                 // 找到对应的处理器
                 const symbolType = this.symbols[location.symbol] || this.symbols['*'];
-                if(! symbolType 
+                if(! symbolType
                     || ! symbolType.handler
                     || ( symbolType.accept && ! symbolType.accept(this.INPUT.location) )) {
                     this._resetInputSymbol();
@@ -1056,16 +1163,18 @@
                 symbolType.indicator = location.symbol;
                 // 标记为正在输入关键字内容
                 this._startSymbolQueryInputing();
+                // 更新弹出窗的触发元素
+                this._changeValidPopTrigger();
                 // 调用进行处理
                 this._handleSymbol(symbolType, location);
             },
-            _setFakeSymbol(symbol) {
+            _setVirtualSymbol(symbol) {
                 if(! symbol) {
-                    this.POP.fakeSymbol = '';
+                    this.POP.virtualSymbol = '';
                     return;
                 }
                 if(_.isObject(symbol)) {
-                    this.POP.fakeSymbol = symbol;
+                    this.POP.virtualSymbol = symbol;
                     return;
                 }
                 const symbolType = this.symbols[symbol];
@@ -1073,7 +1182,7 @@
                     return;
                 }
                 symbolType.indicator = symbol;
-                this.POP.fakeSymbol = symbolType;
+                this.POP.virtualSymbol = symbolType;
             },
             _handleSymbol(symbolType, location, focusOnDom) {
                 if(! symbolType || ! location) {
@@ -1121,18 +1230,18 @@
                 this.INPUT.symbolLocation = '';
                 this.INPUT.symbolQuery = '';
             },
-            _initPopItemMap() {
-                if(! this.currentPopItemSymbolTypeName) {
+            _initSymbolItemMap() {
+                if(! this.currentSymbolItemSymbolTypeName) {
                     return;
                 }
-                if(! this.popItems || ! this.popItems.length) {
-                    this.POP.itemMap[this.currentPopItemSymbolTypeName] = '';
+                if(! this.symbolItems || ! this.symbolItems.length) {
+                    this.POP.itemMap[this.currentSymbolItemSymbolTypeName] = '';
                     return;
                 }
-                this._mergePopItemMap(this.currentPopItemSymbolTypeName, 
-                    this.popItems, true);
+                this._mergeSymbolItemMap(this.currentSymbolItemSymbolTypeName, 
+                    this.symbolItems, true);
             },
-            _mergePopItemMap(name, items, needReset) {
+            _mergeSymbolItemMap(name, items, needReset) {
                 if(! items || ! items.length) {
                     return;
                 }
@@ -1142,118 +1251,138 @@
                 for(let item of items) {
                     this.POP.itemMap[name][item.id] = item;
                 }
-                this._getPickedPopItems();
-                this._getLastPickedPopItems();
+                this._getPickedSymbolItemIds();
+                this._getLastPickedSymbolItemIds();
             },
-            _getPopItem(id) {
-                if(! id || ! this.currentPopItemSymbolTypeName) {
+            _getSymbolItem(id) {
+                if(! id || ! this.currentSymbolItemSymbolTypeName) {
                     return '';
                 }
                 if(_.isObject(id)) {
                     return id;
                 }
-                return this.POP.itemMap[this.currentPopItemSymbolTypeName][id] || '';
+                return this.POP.itemMap[this.currentSymbolItemSymbolTypeName][id] || '';
             },
             openPop(trigger) {
                 if(! this.cursorDom || ! this.inputPopDom) {
                     return;
                 }
-                this.POP.trigger = trigger || this.cursorDom;
+                if(trigger && ! this._isTextNode(trigger, true)) {
+                    this.POP.trigger = trigger;
+                } else {
+                    this._changeValidPopTrigger();
+                }
                 this.POP.opening = true;
             },
-            _resetPickedPopItems() {
-                if(! this.currentPopItemSymbolTypeName) {
+            _resetPickedSymbolItems() {
+                if(! this.currentSymbolItemSymbolTypeName) {
                     return '';
                 }
-                this.$set(this.POP.picked, this.currentPopItemSymbolTypeName, []);
-                this.onPickedPopItemChange();
+                this.$set(this.POP.pickedIds, this.currentSymbolItemSymbolTypeName, []);
+                this.onPickedSymbolItemChange();
             },
-            _getPickedPopItems() {
-                if(! this.currentPopItemSymbolTypeName) {
+            _getPickedSymbolItemIds() {
+                if(! this.currentSymbolItemSymbolTypeName) {
                     return '';
                 }
-                const picked = this.POP.picked[this.currentPopItemSymbolTypeName];
-                if(picked) {
-                    return picked;
+                const pickedIds = this.POP.pickedIds[this.currentSymbolItemSymbolTypeName];
+                if(pickedIds) {
+                    return pickedIds;
                 }
-                this.$set(this.POP.picked, this.currentPopItemSymbolTypeName, []);
-                return this.POP.picked[this.currentPopItemSymbolTypeName];
+                this.$set(this.POP.pickedIds, this.currentSymbolItemSymbolTypeName, []);
+                return this.POP.pickedIds[this.currentSymbolItemSymbolTypeName];
             },
-            _getLastPickedPopItems() {
-                if(! this.currentPopItemSymbolTypeName) {
+            _getLastPickedSymbolItemIds() {
+                if(! this.currentSymbolItemSymbolTypeName) {
                     return '';
                 }
-                const lastPicked = this.POP.lastPicked[this.currentPopItemSymbolTypeName];
-                if(lastPicked) {
-                    return lastPicked;
+                const lastPickedIds = this.POP.lastPickedIds[this.currentSymbolItemSymbolTypeName];
+                if(lastPickedIds) {
+                    return lastPickedIds;
                 }
-                this.$set(this.POP.lastPicked, this.currentPopItemSymbolTypeName, []);
-                return this.POP.lastPicked[this.currentPopItemSymbolTypeName];
+                this.$set(this.POP.lastPickedIds, this.currentSymbolItemSymbolTypeName, []);
+                return this.POP.lastPickedIds[this.currentSymbolItemSymbolTypeName];
             },
-            _togglePickPopItem(popItem) {
-                if(this._pickPopItem(popItem)) {
+            _togglePickSymbolItem(symbolItem) {
+                if(this._pickSymbolItem(symbolItem)) {
                     return;
                 }
-                this._unpickPopItem(popItem);
+                this._unpickSymbolItem(symbolItem);
             },
-            _pickPopItem(popItem) {
-                const picked = this._getPickedPopItems();
-                if(! popItem || ! picked || picked.indexOf(popItem.id) != -1) {
-                    return false;
-                }
-                picked.push(popItem.id);
-                this.onPickedPopItemChange();
-                return true;
-            },
-            _unpickPopItem(popItem) {
-                const picked = this._getPickedPopItems();
-                if(! popItem  || ! picked || picked.indexOf(popItem.id) == -1) {
-                    return false;
-                }
-                this.$delete(picked, picked.indexOf(popItem.id));
-                this.onPickedPopItemChange();
-                return true;
-            },
-            onPickedPopItemChange() {
-                if(! this.currentPopItemSymbolTypeName) {
+            _pickSymbolItem(symbolItem) {
+                if(this.currentSymbolItemSymbolType.repeatable) {
+                    this._insertSymbolItemElement(symbolItem);
                     return;
                 }
-                const picked = this._getPickedPopItems();
-                const lastPicked = this._getLastPickedPopItems();
-                const removedItems = _.difference(lastPicked, picked);
-                if(removedItems.length) {
-                    for(let item of removedItems) {
-                        this._removePopItemElement(this._getPopItem(item));
+                const pickedIds = this._getPickedSymbolItemIds();
+                if(! symbolItem || ! pickedIds || pickedIds.indexOf(symbolItem.id) != -1) {
+                    return false;
+                }
+                pickedIds.push(symbolItem.id);
+                this.onPickedSymbolItemChange();
+                return true;
+            },
+            _unpickSymbolItem(symbolItem) {
+                if(this.currentSymbolItemSymbolType.repeatable) {
+                    return;
+                }
+                const pickedIds = this._getPickedSymbolItemIds();
+                if(! symbolItem  || ! pickedIds || pickedIds.indexOf(symbolItem.id) == -1) {
+                    return false;
+                }
+                this.$delete(pickedIds, pickedIds.indexOf(symbolItem.id));
+                this.onPickedSymbolItemChange();
+                return true;
+            },
+            onPickedSymbolItemChange() {
+                if(! this.currentSymbolItemSymbolTypeName) {
+                    return;
+                }
+                if(this.symbolItemsChangeTimer) {
+                    clearTimeout(this.symbolItemsChangeTimer);
+                }
+                this.symbolItemsChangeTimer = setTimeout(() => {
+                    const pickedIds = this._getPickedSymbolItemIds();
+                    const lastPickedIds = this._getLastPickedSymbolItemIds();
+                    const removedItems = _.difference(lastPickedIds, pickedIds);
+                    if(removedItems.length) {
+                        for(let itemId of removedItems) {
+                            this._removeSymbolItemElement(this._getSymbolItem(itemId));
+                        }
                     }
-                }
-                if(! picked.length) {
+                    if(! pickedIds.length) {
+                        return;
+                    }
+                    this._deleteSymbolContent();
+                    for(let pickedId of pickedIds) {
+                        this._insertSymbolItemElement(this._getSymbolItem(pickedId));
+                    }
+                    this.POP.lastPickedIds[this.currentSymbolItemSymbolTypeName] = _.clone(pickedIds);
+                    this._setVirtualSymbol();
+                }, 400);
+            },
+            _getSymbolItemElementId(item, repeatable) {
+                if(! this.currentSymbolItemSymbolTypeName) {
                     return;
                 }
-                this._deleteSymbolContent();
-                for(let item of picked) {
-                    this._insertPopItemElement(this._getPopItem(item));
-                }
-                this._setFakeSymbol();
-                this.POP.lastPicked[this.currentPopItemSymbolTypeName] = _.clone(picked);
+                return 'stxa' + this._uid 
+                    + this.currentSymbolItemSymbolTypeName 
+                    + item.id + (repeatable ? _.uniqueId() : '');
             },
-            _getPopItemElementId(item) {
-                if(! this.currentSymbolTypeName) {
-                    return;
-                }
-                return 'stxa' + this._uid + this.currentSymbolTypeName + item.id;
-            },
-            _getPopItemTag(item) {
-                const result = this.INPUT.symbol.display && this.INPUT.symbol.display(item);
+            _getSymbolItemTag(item) {
+                const result = this.currentSymbolItemSymbolType.display 
+                    && this.currentSymbolItemSymbolType.display(item, this.META);
                 if(result) {
                     return result;
                 }
-                return this.INPUT.symbol.indicator + item.name;
+                return this.currentSymbolItemSymbolType.indicator + item.name;
             },
-            _insertPopItemElement(item) {
+            _insertSymbolItemElement(item) {
                 if(! item) {
                     return;
                 }
-                const id = this._getPopItemElementId(item);
+                const repeatable = this.currentSymbolItemSymbolType.repeatable;
+                const id = this._getSymbolItemElementId(item, repeatable);
                 if(! id) {
                     return;
                 }
@@ -1261,21 +1390,22 @@
                 if(existed) {
                     return;
                 }
-                const dom = this._wrapElementInput(this._getPopItemTag(item), 'tag', {
-                    type: 'tag',
-                    data: item,
-                    symbol: this.currentPopItemSymbolType,
-                    location: this.INPUT.symbolLocation || this.INPUT.symbolLastLocation,
+                const dom = this._wrapElementInput(this._getSymbolItemTag(item), 'tag', {
+                    id: id,
+                    symbolItem: item,
+                    symbol: this.currentSymbolItemSymbolType,
+                    location: _.clone(this.INPUT.symbolLocation || this.INPUT.symbolLastLocation),
                 });
-                dom.id = id;
-                dom.$itemData = item;
                 this._insertElementTypeInput(dom);
             },
-            _removePopItemElement(item) {
+            _removeSymbolItemElement(item) {
                 if(! item) {
                     return;
                 }
-                const id = this._getPopItemElementId(item);
+                if(this.INPUT.symbol.repeatable) {
+                    return;
+                }
+                const id = this._getSymbolItemElementId(item);
                 const existed = document.getElementById(id);
                 if(! existed) {
                     return;
@@ -1284,13 +1414,13 @@
                 this._changeValidPopTrigger();
             },
             _changeValidPopTrigger() {
-                if(this.POP.trigger 
-                    && this.inputDom.contains(this.POP.trigger)) {
-                    return;
-                }
                 if(this.inputDom.contains(this.cursorDom)) {
                     this.POP.trigger = this.cursorDom;
                     this.POP.placement = 'bottom-start';
+                    return;
+                }
+                if(this.POP.trigger 
+                    && this.inputDom.contains(this.POP.trigger)) {
                     return;
                 }
                 const lastElement = this._findElementNode(
@@ -1350,21 +1480,15 @@
                 }
                 bindEvent(this.inputDom, 'keydown', (e) => {
                     let event = (e.originalEvent || e);
-                    if(event.keyCode != 9) { // 按下Tab键
+                    if(event.keyCode == 9
+                        && ! event.shiftKey) { // 按下Tab键
+                        this._insertBlankTypeInput();
                         return;
                     }
-                    console.log('keydown', event);
-                    stopBubble(event);
-                    if(event.shiftKey) {
-                        return;
-                    }
-                    this._insertBlankTypeInput();
                 }, false);
                 bindEvent(this.inputDom, 'keyup', (e) => {
                     let event = (e.originalEvent || e);
                     console.log('keyup', event);
-                    // 更新当前输入的内容
-                    this.updateInput();
                     // 点击控制输入的按键键不触发监听
                     if(CURSOR_CONTROL_KEY_CODES.indexOf(event.keyCode) != -1) {
                         this._locateFakeCursor(false);
@@ -1403,7 +1527,8 @@
                         return;
                     }
                     // 关键字触发产生的封装节点
-                    if(attachment.symbol) {
+                    if(attachment.symbol
+                        && ! attachment.symbol.repeatable) {
                         setTimeout(() => {
                             this._handleSymbol(
                                 attachment.symbol, 
@@ -1422,8 +1547,6 @@
                     } else if (window.clipboardData) {
                         this._handleClipBoardData(window.clipboardData);
                     }
-                    // 更新当前输入的内容
-                    this.updateInput();
                 }, false);
                 bindEvent(this.inputDom, 'drop', (e) => {
                     let event = (e.originalEvent || e);
@@ -1439,8 +1562,6 @@
                         }
                         this._insertTextTypeInput(text);
                     }
-                    // 更新当前输入的内容
-                    this.updateInput();
                 }, false);
             },
             _initFileInput() {
@@ -1492,6 +1613,8 @@
                             if(this.cursorDom === removedNode) {
                                 continue;
                             }
+                            /* 再调一次删除相关的东西 */
+                            this._removeNode(removedNode);
                             if(this.MUTATION.removedNodes.indexOf(removedNode) == -1) {
                                 this.MUTATION.removedNodes.push(removedNode);
                             }
@@ -1519,42 +1642,62 @@
                     if(addedNodes.indexOf(removedNode) != -1) {
                         continue;
                     }
-                    if(removedNode.$itemData) {
-                        this._setFakeSymbol(removedNode.$symbol);
-                        this._unpickPopItem(removedNode.$itemData);
-                        this.$emit('tag-removed', [removedNode.$itemData]);
-                        console.log('remove node', removedNode);
+                    console.log('remove node', removedNode);
+                    // 对带数据的节点要特别处理
+                    const attachment = removedNode.$attachment;
+                    if(! attachment) {
+                        this.updateInput();
+                        continue;
                     }
-                    // if(removedNode.$splitor) {
-                    //     this._removeNode(removedNode.$splitor);
-                    // }
-                    // if(removedNode.$splitFor
-                    //     && addedNodes.indexOf(removedNode.$splitFor) == -1) {
-                    //     this._removeNode(removedNode.$splitFor);
-                    // }
+                    if(attachment.symbolItem) {
+                        this._setVirtualSymbol(attachment.symbol);
+                        if(! attachment.symbol.repeatable) {
+                            this._unpickSymbolItem(attachment.symbolItem);
+                        }
+                        this.$emit('tag-removed', [this._getSymbolItem(attachment.symbolItem.id)]);
+                        this._setVirtualSymbol();
+                    } else if(attachment.file) {
+                        this.$emit('file-removed', attachment.file);
+                    }
+                    // 更新当前输入的内容
+                    this.updateInput();
                 }
                 for(let addedNode of addedNodes) {
                     if(removedNodes.indexOf(addedNode) != -1) {
                         continue;
                     }
-                    if(addedNode.$itemData) {
-                        this._setFakeSymbol(addedNode.$symbol);
-                        this._pickPopItem(addedNode.$itemData);
-                        this.$emit('tag-added', [addedNode.$itemData]);
-                        console.log('add node', addedNode);
+                    console.log('add node', addedNode);
+                    // 如果有数据的节点需要专门处理
+                    const attachment = addedNode.$attachment;
+                    if(! attachment) {
+                        this.updateInput();
+                        continue;
                     }
+                    if(attachment.symbolItem) { // 标签内容
+                        this._setVirtualSymbol(attachment.symbol);
+                        if(! attachment.symbol.repeatable) {
+                            this._pickSymbolItem(attachment.symbolItem);
+                        }
+                        this.$emit('tag-added', [this._getSymbolItem(attachment.symbolItem.id)]);
+                        this._setVirtualSymbol();
+                    } else if(attachment.file) { // 文件内容，包括图片
+                        this.$emit('file-added', attachment.file);
+                    }
+                    // 更新当前输入的内容
+                    this.updateInput();
                 }
                 this.MUTATION.removedNodes = [];
                 this.MUTATION.addedNodes = [];
             },
         },
         mounted() {
-            this._initPopItemMap();
+            this._initSymbolItemMap();
             this.$nextTick(() => {
                 this._initImgInput();
                 this._initFileInput();
                 this._initInputEvents();
                 this._initInputObserver();
+                this._generateMeta();
             });
             
         },
@@ -1572,15 +1715,6 @@
             height: 0;
             position: absolute;
             display: inline-block;
-            // &:before {
-            //     width: px2rem(8px);
-            //     height: px2rem(8px);
-            //     content: '';
-            //     position: absolute;
-            //     top: px2rem(-8px);;
-            //     left: 0;
-            //     background: red;
-            // }
         }
         .smart-textarea__input {
             width: 100%;
@@ -1629,7 +1763,11 @@
         }
         .smart-textarea__input-tag  {
             width: auto;
+            max-width: px2rem(240px);
             height: auto;
+            max-height: px2rem(240px);
+            word-break: break-all;
+            white-space: nowrap;
             overflow: visible;
             margin-left: px2rem(4px);
             border: none;
@@ -1638,11 +1776,6 @@
         .smart-textarea__input-img {
             width: auto;
             height: auto;
-            .smart-textarea__input-item-wrapper {
-                height: px2rem(80px);
-            }
-        }
-        .smart-textarea__input-emoji {
             .smart-textarea__input-item-wrapper {
                 height: px2rem(80px);
             }
@@ -1671,14 +1804,28 @@
         padding: px2rem(2px);
         box-shadow: px2rem(0px) px2rem(2px) px2rem(8px) px2rem(1px) rgba($bgc_main, 0.2);
         overflow: hidden;
+        display: flex;
         .smart-textarea__popover-body {
             width: 100%;
             height: 100%;
+            flex: 1 1 auto;;
         }
         .smart-textarea__popover-tabs {
             width: 100%;
             height: 100%;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            .van-tabs__wrap {
+                flex-shrink: 0;
+            }
+            .van-tabs__content {
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                flex: 1 1 auto;    
+            }
         }
         .smart-textarea__popover-list {
             width: 100%;
@@ -1705,10 +1852,10 @@
             width: px2rem(4px);  
         }
         &.smart-textarea__popover--grid {
-            width: px2rem(180px);
+            width: px2rem(220px);
             height: auto;
             min-height: px2rem(50px);
-            max-height: px2rem(150px);
+            max-height: px2rem(300px);
             .smart-textarea__popover-list {
                 display: flex;
                 flex-wrap: wrap;
